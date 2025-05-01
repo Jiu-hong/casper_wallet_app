@@ -1,0 +1,1 @@
+This app integrates [Casper Wallet](https://github.com/make-software/casper-wallet-sdk)
