@@ -9,7 +9,8 @@ import {
   TransactionV1
 } from "casper-js-sdk";
 
-const NETWORKNAME = "casper-test"
+// const NETWORKNAME = "casper-test"
+const NETWORKNAME = "casper-net-1"
 const TTL = 1800000
 const PATH_TO_CONTRACT = "contract.wasm"
 
@@ -120,13 +121,24 @@ function App() {
   const get_signature_with_prefix = (activeKey, res) => {
     const publicKeyBytes = PublicKey.fromHex(activeKey).key.bytes();
 
-    // Extract prefix (first byte of 33-byte public key)
-    const prefix = publicKeyBytes[0];
+    // if length 32, 01.
+    // if length 33, 02
+    let prefix;
+    if (publicKeyBytes.length === 32) {
+      prefix = 0x01;
+    } else if (publicKeyBytes.length === 33) {
+      prefix = 0x02;
+    } else {
+      throw new Error("Unexpected publicKeyBytes length: " + publicKeyBytes.length);
+    }
 
     // Add prefix to signature (Uint8Array)
     const signatureWithPrefix = new Uint8Array(res.signature.length + 1);
+
     signatureWithPrefix[0] = prefix;
+
     signatureWithPrefix.set(res.signature, 1);
+
 
     return signatureWithPrefix
 
@@ -145,6 +157,7 @@ function App() {
       } else {
 
         const signatureWithPrefix = get_signature_with_prefix(activeKey, res)
+
         signedTransaction = TransactionV1.setSignature(
           transaction,
           signatureWithPrefix,
