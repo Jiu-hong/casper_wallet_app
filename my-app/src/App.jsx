@@ -9,7 +9,8 @@ import {
   TransactionV1
 } from "casper-js-sdk";
 
-const NETWORKNAME = "casper-net-1"
+// const NETWORKNAME = "casper-net-1"
+const NETWORKNAME = "casper-test"
 const TTL = 1800000
 const PATH_TO_CONTRACT = "contract.wasm"
 
