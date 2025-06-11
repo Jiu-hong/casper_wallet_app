@@ -70,7 +70,7 @@ function App() {
     const publicKey = PublicKey.fromHex(publicKeyHex);
 
     const args = Args.fromMap({
-      message1: CLValue.newCLString('1000000000')
+      message1: CLValue.newCLString(message1)
     });
     const contractCall = new ContractCallBuilder()
       .byHash("95286e200f0b206c954e5386897092c40fb38a4fad56089b09e43a91e04185f0")
@@ -91,13 +91,9 @@ function App() {
   const createnewModuleBytesDeploy = async (publicKeyHex) => {
     const publicKey = PublicKey.fromHex(publicKeyHex);
     const args = Args.fromMap({
-      target: CLValue.newCLPublicKey(
-        PublicKey.fromHex(
-          '0202f5a92ab6da536e7b1a351406f3744224bec85d7acbab1497b65de48a1a707b64'
-        )
-      ),
-      amount: CLValue.newCLUInt512('000'),
-      id: CLValue.newCLOption(CLValue.newCLUint64(3))
+      message: CLValue.newCLString(
+        message
+      )
     });
 
     let wasmBytes
@@ -108,7 +104,7 @@ function App() {
     const sessionWasm = new SessionBuilder()
       .from(publicKey)
       .chainName(NETWORKNAME)
-      .payment(20_000_000_000)
+      .payment(10_000_000_000)
       .ttl(TTL)
       .wasm(wasmBytes)
       .installOrUpgrade()
