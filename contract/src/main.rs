@@ -15,7 +15,8 @@ use casper_contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use casper_types::{
-    ApiError, CLType, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Key,
+    ApiError, CLType, EntityEntryPoint as EntryPoint, EntryPointAccess, EntryPointType,
+    EntryPoints, Key,
 };
 
 const KEY_NAME: &str = "my-key-name";
@@ -72,9 +73,22 @@ pub extern "C" fn call() {
         Vec::new(),
         CLType::Unit,
         EntryPointAccess::Public,
-        EntryPointType::Contract,
+        EntryPointType::Called,
+        casper_types::EntryPointPayment::Caller,
     ));
 
-    let (stored_contract_hash, _) = storage::new_contract(counter_entry_points, None, None, None);
+    //     pub fn condor() -> EntryPoint {
+    //     EntryPoint::new(
+    //         String::from(ENTRY_POINT_CONDOR),
+    //         Vec::new(),
+    //         String::cl_type(),
+    //         EntryPointAccess::Public,
+    //         EntryPointType::Called,
+    //         casper_types::EntryPointPayment::Caller,
+    //     )
+    // }
+
+    let (stored_contract_hash, _) =
+        storage::new_contract(counter_entry_points, None, None, None, None);
     runtime::put_key("my_contract", stored_contract_hash.into())
 }

@@ -12,8 +12,8 @@ app.use(urlencoded({ limit: "30mb", extended: true }));
 import pkg from 'casper-js-sdk'
 const { HttpHandler, RpcClient, Transaction, PurseIdentifier, PublicKey } = pkg;
 
-const ENDPOINT = "https://node.testnet.casper.network/rpc"
-// const ENDPOINT = "http://localhost:11101/rpc"
+// const ENDPOINT = "https://node.testnet.casper.network/rpc"
+const ENDPOINT = "http://localhost:11103/rpc"
 const rpcHandler = new HttpHandler(ENDPOINT);
 const rpcClient = new RpcClient(rpcHandler);
 
