@@ -22,6 +22,7 @@ function App() {
   const [balance, setbalance] = useState("");
   const [message1, setMessage1] = useState("");
   const [message, setMessage] = useState("");
+  const [contractHash,setContractHash] = useState("")
   const [deployhashnewModuleBytesDeploy, setDeployhashnewModuleBytesDeploy] = useState("");
   const [deployhashStoredContractByHash, setDeployhashStoredContractByHash] = useState("");
   const [walletDetected, setWalletDetected] = useState(false);
@@ -73,7 +74,7 @@ function App() {
       message1: CLValue.newCLString(message1)
     });
     const contractCall = new ContractCallBuilder()
-      .byHash("95286e200f0b206c954e5386897092c40fb38a4fad56089b09e43a91e04185f0")
+      .byHash(contractHash)
       .from(publicKey)
       .entryPoint("hello_world")
       .chainName(NETWORKNAME)
@@ -104,7 +105,7 @@ function App() {
     const sessionWasm = new SessionBuilder()
       .from(publicKey)
       .chainName(NETWORKNAME)
-      .payment(10_000_000_000)
+      .payment(20_000_000_000)
       .ttl(TTL)
       .wasm(wasmBytes)
       .installOrUpgrade()
@@ -324,12 +325,27 @@ function App() {
         ======<strong>StoredContractByHash</strong> ======
         <div>
           <label htmlFor="">
+            contract hash
+            <input
+              type="text"
+              value={contractHash}
+              onChange={(e) => setContractHash(e.target.value)}
+              style={{ width: '500px' }}
+              placeholder="Enter contract hash here"
+            />
+            <br />
+            {contractHash}
+          </label>
+          <br />
+          <label htmlFor="">
             message1
             <input
               type="text"
               value={message1}
               onChange={(e) => setMessage1(e.target.value)}
+              placeholder="Enter message here"
             />
+            <br />
             {message1}
           </label>
 
@@ -359,7 +375,9 @@ function App() {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              placeholder="Enter message here"
             />
+            <br />
             {message}
           </label>
 
