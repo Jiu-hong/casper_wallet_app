@@ -77,17 +77,6 @@ pub extern "C" fn call() {
         casper_types::EntryPointPayment::Caller,
     ));
 
-    //     pub fn condor() -> EntryPoint {
-    //     EntryPoint::new(
-    //         String::from(ENTRY_POINT_CONDOR),
-    //         Vec::new(),
-    //         String::cl_type(),
-    //         EntryPointAccess::Public,
-    //         EntryPointType::Called,
-    //         casper_types::EntryPointPayment::Caller,
-    //     )
-    // }
-
     let (stored_contract_hash, _) =
         storage::new_contract(counter_entry_points, None, None, None, None);
     runtime::put_key("my_contract", stored_contract_hash.into())
