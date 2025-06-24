@@ -6,6 +6,7 @@ import {
   PublicKey,
   ContractCallBuilder,
   SessionBuilder,
+  NativeTransferBuilder,
   TransactionV1
 } from "casper-js-sdk";
 
@@ -17,14 +18,16 @@ const PATH_TO_CONTRACT = "contract.wasm"
 
 function App() {
   // Always call hooks first
-
   const [activeKey, setActivePublicKey] = useState("");
+  const [targetAccount, setTargetAccount] = useState("");
+  const [amount, setAmount] = useState("");
   const [balance, setbalance] = useState("");
   const [message1, setMessage1] = useState("");
   const [message, setMessage] = useState("");
   const [contractHash,setContractHash] = useState("")
   const [deployhashnewModuleBytesDeploy, setDeployhashnewModuleBytesDeploy] = useState("");
   const [deployhashStoredContractByHash, setDeployhashStoredContractByHash] = useState("");
+  const [deployhashNativeTransfer, setDeployhashNativeTransfer] = useState("");
   const [walletDetected, setWalletDetected] = useState(false);
   const [eventTypes, setEventTypes] = useState(null);
 
@@ -45,7 +48,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fix: Detect if CasperWalletProvider is a function or object
   const provider =
     typeof window.CasperWalletProvider === "function"
       ? window.CasperWalletProvider()
@@ -83,9 +85,30 @@ function App() {
       .payment(2_500_000_000);
 
     const transaction = contractCall.build()
-    // transaction.sign(privateKey);
 
+    return transaction
+  };
 
+  const createNativeTransfer = async (publicKeyHex) => {
+    const publicKey = PublicKey.fromHex(publicKeyHex);
+
+    const args = Args.fromMap({
+      message1: CLValue.newCLString(message1)
+    });
+
+  const transaction = new NativeTransferBuilder()
+    .from(publicKey)
+    .target(
+      PublicKey.fromHex( 
+        targetAccount
+      )
+    )
+    .amount(amount) // Amount in motes
+    .id(Date.now())
+    .chainName(NETWORKNAME)
+    .payment(100_000_000)
+    .build();
+    
     return transaction
   };
 
@@ -141,43 +164,20 @@ function App() {
 
   }
   const signDeployStoredContractByHash = async () => {
-
-
     const transaction = await createStoredContractByHashDeploy(activeKey);
-    const transactionJSON = transaction.toJSON()
-    let signedTransaction;
-
     try {
-      const res = await provider.sign(JSON.stringify(transactionJSON), activeKey);
-      if (res.cancelled) {
-        alert("Sign cancelled");
-      } else {
-
-        const signatureWithPrefix = get_signature_with_prefix(activeKey, res)
-        signedTransaction = TransactionV1.setSignature(
-          transaction,
-          signatureWithPrefix,
-          PublicKey.fromHex(activeKey)
-        );
-        // alert("Sign successful: " + JSON.stringify(signedDeploy, null, 2));
-        console.log(
-          "Sign successful: " + JSON.stringify(signedTransaction, null, 2)
-        );
-        const { data } = await fetchDetail(signedTransaction);
-
-        setDeployhashStoredContractByHash(data);
-      }
+        const transaction_hash = await signAndDeploy(transaction);
+        setDeployhashStoredContractByHash(transaction_hash);
     } catch (err) {
       alert("Error: " + err);
     }
   };
 
-  const signnewModuleBytesTransaction = async () => {
-    const transaction = await createnewModuleBytesDeploy(activeKey);
+  const signAndDeploy = async (transaction) => {
     const transactionJSON = transaction.toJSON()
     let signedTransaction;
 
-    try {
+    try { 
       const res = await provider.sign(JSON.stringify(transactionJSON), activeKey);
       if (res.cancelled) {
         alert("Sign cancelled");
@@ -189,14 +189,34 @@ function App() {
           signatureWithPrefix,
           PublicKey.fromHex(activeKey)
         );
-        // alert("Sign successful: " + JSON.stringify(signedDeploy, null, 2));
         console.log(
           "Sign successful: " + JSON.stringify(signedTransaction, null, 2)
         );
         const { data } = await fetchDetail(signedTransaction);
+        console.log("data:",data)
 
-        setDeployhashnewModuleBytesDeploy(data);
+        return data;
       }
+    }
+    catch (err) {
+      alert("Error: " + err);
+    }
+  }
+  const signNativeTransfer = async () => {
+    const transaction = await createNativeTransfer(activeKey);
+    try {
+        const transaction_hash = await signAndDeploy(transaction);
+        setDeployhashNativeTransfer(transaction_hash);
+    } catch (err) {
+      alert("Error: " + err);
+    }
+  };
+  
+  const signnewModuleBytesTransaction = async () => {
+    const transaction = await createnewModuleBytesDeploy(activeKey);
+    try {
+        const transaction_hash = await signAndDeploy(transaction);
+        setDeployhashnewModuleBytesDeploy(transaction_hash);
     } catch (err) {
       alert("Error: " + err);
     }
@@ -324,7 +344,7 @@ function App() {
       <div>
         ======<strong>StoredContractByHash</strong> ======
         <div>
-          <label htmlFor="">
+          <label htmlFor="" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '1em' }}>
             contract hash
             <input
               type="text"
@@ -333,11 +353,10 @@ function App() {
               style={{ width: '500px' }}
               placeholder="Enter contract hash here"
             />
-            <br />
-            {contractHash}
           </label>
+          <div style={{ textAlign: 'left', marginLeft: '2px' }}>{contractHash}</div>
           <br />
-          <label htmlFor="">
+          <label htmlFor="" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '1em' }}>
             message1
             <input
               type="text"
@@ -345,31 +364,67 @@ function App() {
               onChange={(e) => setMessage1(e.target.value)}
               placeholder="Enter message here"
             />
-            <br />
             {message1}
           </label>
-
-          <br />
-
           <div>
             <input
               type="submit"
               value="deploy"
               onClick={signDeployStoredContractByHash}
             />
-            <hr />
-          </div>
 
           {deployhashStoredContractByHash && (
             <div>transaction hash {deployhashStoredContractByHash}</div>
-          )}
+            )}
+          <br />
+          </div>
+        </div>
+      </div>
+      <hr />
+      <div>
+        ======<strong>Native Transfer</strong> ======
+        <div>
+          <label htmlFor="" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '1em' }}>
+            target account
+            <input
+              type="text"
+              value={targetAccount}
+              onChange={(e) => setTargetAccount(e.target.value)}
+              style={{ width: '500px' }}
+              placeholder="Enter target account here"
+            />
+          </label>
+          <div style={{ textAlign: 'left', marginLeft: '2px' }}>{targetAccount}</div>
+          <br />
+          <label htmlFor="" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '1em' }}>
+            amount
+            <input
+              type="text"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter transfer amount here"
+            />
+            {amount}
+          </label>
+          <div>
+            <input
+              type="submit"
+              value="deploy"
+              onClick={signNativeTransfer}
+            />
+
+          {deployhashNativeTransfer && (
+            <div>transaction hash {deployhashNativeTransfer}</div>
+            )}
+          <br />
+          </div>
         </div>
       </div>
       <hr />
       <div>
         ======<strong>newModuleBytesDeploy</strong> ======
         <div>
-          <label htmlFor="">
+          <label htmlFor="" style={{ display: 'flex', alignItems: 'center', gap: '0.5em', marginBottom: '1em' }}>
             message
             <input
               type="text"
@@ -377,11 +432,10 @@ function App() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Enter message here"
             />
-            <br />
             {message}
           </label>
 
-          <br />
+          {/* <br /> */}
 
           <div>
             <input
@@ -389,12 +443,14 @@ function App() {
               value="deploy"
               onClick={signnewModuleBytesTransaction}
             />
-            <hr />
-          </div>
 
           {deployhashnewModuleBytesDeploy && (
             <div>transaction hash {deployhashnewModuleBytesDeploy}</div>
-          )}
+            )}
+            <br/>
+          </div>
+            <hr />
+
         </div>
       </div>
       <div>
