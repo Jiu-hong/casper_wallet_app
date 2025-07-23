@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchDetail, fetchBalance } from "./api";
+import ErrorBoundary from "./ErrorBoundary";
 
 import {
   Args, CLValue,
@@ -10,9 +11,10 @@ import {
   TransactionV1
 } from "casper-js-sdk";
 
-const NETWORKNAME = "casper-net-1"
-// const NETWORKNAME = "casper-test"
+// const NETWORKNAME = "casper-net-1"
+const NETWORKNAME = "casper-test"
 const TTL = 1800000
+// const PATH_TO_CONTRACT = "contract.wasm"
 const PATH_TO_CONTRACT = "contract.wasm"
 
 
@@ -90,26 +92,34 @@ function App() {
   };
 
   const createNativeTransfer = async (publicKeyHex) => {
-    const publicKey = PublicKey.fromHex(publicKeyHex);
+    if (!publicKeyHex) {
+      throw new Error("Public key is required");
+    }
+    if (!targetAccount) {
+      throw new Error("Target account is required");
+    }
+    if (!amount || isNaN(amount)) {
+      throw new Error("Valid amount is required");
+    }
 
-    const args = Args.fromMap({
-      message1: CLValue.newCLString(message1)
-    });
+    try {
+      const publicKey = PublicKey.fromHex(publicKeyHex);
+      const targetPublicKey = PublicKey.fromHex(targetAccount);
 
-  const transaction = new NativeTransferBuilder()
-    .from(publicKey)
-    .target(
-      PublicKey.fromHex( 
-        targetAccount
-      )
-    )
-    .amount(amount) // Amount in motes
-    .id(Date.now())
-    .chainName(NETWORKNAME)
-    .payment(100_000_000)
-    .build();
-    
-    return transaction
+      const transaction = new NativeTransferBuilder()
+        .from(publicKey)
+        .target(targetPublicKey)
+        .amount(BigInt(amount)) // Convert to BigInt for proper handling
+        .id(Date.now())
+        .chainName(NETWORKNAME)
+        .payment(100_000_000)
+        .build();
+        
+      return transaction;
+    } catch (error) {
+      console.error("Error creating native transfer:", error);
+      throw new Error(`Failed to create transfer: ${error.message}`);
+    }
   };
 
   const createnewModuleBytesDeploy = async (publicKeyHex) => {
@@ -164,12 +174,19 @@ function App() {
 
   }
   const signDeployStoredContractByHash = async () => {
-    const transaction = await createStoredContractByHashDeploy(activeKey);
     try {
-        const transaction_hash = await signAndDeploy(transaction);
+      const transaction = await createStoredContractByHashDeploy(activeKey);
+      const transaction_hash = await signAndDeploy(transaction);
+      if (transaction_hash) {
         setDeployhashStoredContractByHash(transaction_hash);
+      }
     } catch (err) {
-      alert("Error: " + err);
+      console.error("Error in signDeployStoredContractByHash:", err);
+      
+      // Show the complete error object for debugging
+      const errorMessage = JSON.stringify(err, null, 2);
+      
+      alert("Contract Deployment Error: " + errorMessage);
     }
   };
 
@@ -181,8 +198,8 @@ function App() {
       const res = await provider.sign(JSON.stringify(transactionJSON), activeKey);
       if (res.cancelled) {
         alert("Sign cancelled");
+        return null;
       } else {
-
         const signatureWithPrefix = get_signature_with_prefix(activeKey, res)
         signedTransaction = TransactionV1.setSignature(
           transaction,
@@ -199,38 +216,96 @@ function App() {
       }
     }
     catch (err) {
-      alert("Error: " + err);
+      console.error("Error in signAndDeploy:", JSON.stringify(err));
+      
+      // Show the complete error object for debugging
+      const errorMessage = JSON.stringify(err, null, 2);
+      
+      alert("Transaction Error: " + errorMessage);
+      throw err;
     }
   }
   const signNativeTransfer = async () => {
-    const transaction = await createNativeTransfer(activeKey);
+    if (!activeKey) {
+      alert("Please connect to your wallet first");
+      return;
+    }
+    if (!targetAccount) {
+      alert("Please enter a target account");
+      return;
+    }
+    if (!amount) {
+      alert("Please enter an amount");
+      return;
+    }
+    
     try {
-        const transaction_hash = await signAndDeploy(transaction);
-        setDeployhashNativeTransfer(transaction_hash);
+      console.log("Creating native transfer transaction...");
+      const transaction = await createNativeTransfer(activeKey);
+      
+      console.log("Signing and deploying transaction...");
+      const transaction_hash = await signAndDeploy(transaction);
+      
+      if (transaction_hash && transaction_hash !== null) {
+        console.log("Transaction successful:", transaction_hash);
+        setDeployhashNativeTransfer(String(transaction_hash));
+      } else {
+        console.warn("Transaction was cancelled or failed");
+      }
     } catch (err) {
-      alert("Error: " + err);
+      console.error("Error in signNativeTransfer:", err);
+      
+      // Show the complete error object for debugging
+      const errorMessage = JSON.stringify(err, null, 2);
+      
+      alert("Native Transfer Error: " + errorMessage);
+      // Don't update state on error to prevent React errors
     }
   };
   
   const signnewModuleBytesTransaction = async () => {
-    const transaction = await createnewModuleBytesDeploy(activeKey);
     try {
-        const transaction_hash = await signAndDeploy(transaction);
+      const transaction = await createnewModuleBytesDeploy(activeKey);
+      const transaction_hash = await signAndDeploy(transaction);
+      if (transaction_hash) {
         setDeployhashnewModuleBytesDeploy(transaction_hash);
+      }
     } catch (err) {
-      alert("Error: " + err);
+      console.error("Error in signnewModuleBytesTransaction:", err);
+      
+      // Show the complete error object for debugging
+      const errorMessage = JSON.stringify(err, null, 2);
+      
+      alert("Module Deployment Error: " + errorMessage);
     }
   };
 
   const getBalance = async () => {
-    if (!activeKey) return;
+    if (!activeKey) {
+      console.warn("No active key available for balance fetch");
+      return;
+    }
     try {
-      const balance = await fetchBalance(activeKey);
-      setbalance(balance); // or setbalance(balance.amount) if needed
+      const balanceResult = await fetchBalance(activeKey);
+      console.log("Balance result:", balanceResult);
+      
+      // Ensure we're setting a string value for display
+      if (balanceResult !== null && balanceResult !== undefined) {
+        const balanceValue = typeof balanceResult === 'object' 
+          ? (balanceResult.balance || balanceResult.amount || JSON.stringify(balanceResult))
+          : String(balanceResult);
+        setbalance(balanceValue);
+      } else {
+        setbalance("0");
+      }
     } catch (error) {
-      // Show a user-friendly error message
-      alert(error.error || "Failed to fetch balance");
-      setbalance(""); // Optionally clear balance on error
+      console.error("Error fetching balance:", error);
+      
+      // Show the complete error object for debugging
+      const errorMessage = JSON.stringify(error, null, 2);
+      
+      alert("Balance Error: " + errorMessage);
+      setbalance(""); // Clear balance on error
     }
   };
 
@@ -330,17 +405,18 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <div>
-        <button onClick={connectToCasperWallet}>
-          {" "}
-          connect to Casper Wallet
-        </button>{" "}
-        <button onClick={switchAccount}>switch account</button>
-        <div>Public key</div>
-        <div> {activeKey}</div>
-      </div>
-      <hr />
+    <ErrorBoundary>
+      <div className="App">
+        <div>
+          <button onClick={connectToCasperWallet}>
+            {" "}
+            connect to Casper Wallet
+          </button>{" "}
+          <button onClick={switchAccount}>switch account</button>
+          <div>Public key</div>
+          <div> {activeKey}</div>
+        </div>
+        <hr />
       <div>
         ======<strong>StoredContractByHash</strong> ======
         <div>
@@ -414,7 +490,7 @@ function App() {
             />
 
           {deployhashNativeTransfer && (
-            <div>transaction hash {deployhashNativeTransfer}</div>
+            <div>transaction hash {typeof deployhashNativeTransfer === 'string' ? deployhashNativeTransfer : String(deployhashNativeTransfer)}</div>
             )}
           <br />
           </div>
@@ -458,11 +534,14 @@ function App() {
         <div>
           <input type="submit" value="getBalance" onClick={getBalance} />
           {!activeKey && <div>please connect to signer</div>}
-          {balance && <div>balance is {balance} motes</div>}
+          {balance && (
+            <div>balance is {typeof balance === 'string' ? balance : String(balance)} motes</div>
+          )}
           <hr />
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

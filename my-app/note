@@ -1,0 +1,20 @@
+casper-client put-transaction session \
+--wasm-path /Users/jh/mywork/casper_wallet_app/contract/target/wasm32-unknown-unknown/release/contract.wasm \
+--session-arg "message1:String='hello world'" \
+--chain-name casper-test \
+--secret-key /Users/jh/keys/test22/secret_key.pem \
+--standard-payment true \
+-n https://node.testnet.casper.network/rpc \
+--gas-price-tolerance 1 \
+--payment-amount 100000000000
+
+
+casper-client put-transaction invocable-entity \
+--entity-address entity-contract-236ffc0ea62b529c7050f5a634955380742e4f719265d7a66f1ae04072be956d \
+--session-arg "message1:String='hello world'" \
+--chain-name casper-test \
+--secret-key /Users/jh/keys/test22/secret_key.pem \
+--standard-payment true \
+-n https://node.testnet.casper.network/rpc \
+--gas-price-tolerance 1 \
+--payment-amount 100000000000
