@@ -8,11 +8,3 @@ cd my-app
 npm i
 npm run dev
 ```
-
-### install and start backend
-
-```
-cd server
-npm i
-npm start
-```
